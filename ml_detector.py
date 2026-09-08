@@ -17,18 +17,23 @@ FEATURE_COLUMNS = [
     "data_transfer_count",
     "total_event_count",
     "activity_duration_seconds",
+    "failed_login_rate",
+    "event_rate",
+    "failed_login_ratio",
 ]
 
 
-def detect_anomalies(features_df, contamination=0.2, random_state=42):
+def detect_anomalies(features_df, contamination="auto", random_state=42, n_estimators=100):
     """
     Fits an Isolation Forest model to numerical behavioral features
     and assigns an anomaly prediction and anomaly score to each IP.
 
     Parameters:
         features_df (pd.DataFrame): DataFrame produced by extract_features().
-        contamination (float): Expected proportion of outliers in the dataset (default: 0.2).
+        contamination (float or 'auto'): Proportion of outliers in the data, or 'auto'
+                                         to use the natural decision boundary (default: 'auto').
         random_state (int): Seed for reproducibility (default: 42).
+        n_estimators (int): Number of decision trees in the forest (default: 100).
 
     Returns:
         pd.DataFrame: A copy of features_df with two new columns:
@@ -44,9 +49,14 @@ def detect_anomalies(features_df, contamination=0.2, random_state=42):
     X = result_df[FEATURE_COLUMNS]
 
     # Step 3: Instantiate the Isolation Forest model
-    # - contamination=0.2 indicates we expect roughly 20% of the observations to be unusual.
+    # - n_estimators=100 builds an ensemble of 100 random isolation trees.
+    # - contamination='auto' uses the natural decision boundary (scores < 0 are anomalies).
     # - random_state=42 ensures identical decision trees are built on each run.
-    model = IsolationForest(contamination=contamination, random_state=random_state)
+    model = IsolationForest(
+        n_estimators=n_estimators,
+        contamination=contamination,
+        random_state=random_state,
+    )
 
     # Step 4: Fit the model to learn the distribution of data points
     model.fit(X)

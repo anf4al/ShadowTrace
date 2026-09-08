@@ -56,7 +56,7 @@ def generate_normal_event(current_time):
     ip = random.choice(NORMAL_IPS)
 
     # Normal events are mostly successful logins and internal server access.
-    # An occasional failed login simulates a normal user typo.
+    # An occasional failed login simulates a normal user typo (approx 1% rate).
     event_type = random.choices(
         population=[
             "LOGIN_SUCCESS",
@@ -64,7 +64,7 @@ def generate_normal_event(current_time):
             "DATA_TRANSFER",
             "LOGIN_FAILED",
         ],
-        weights=[0.45, 0.40, 0.10, 0.05],
+        weights=[0.49, 0.40, 0.10, 0.01],
         k=1,
     )[0]
 
@@ -168,13 +168,14 @@ def generate_suspicious_sequence(start_time):
     return events, next_time
 
 
-def generate_events(count=20, attack_chance=0.2, start_time=None):
+def generate_events(count=1000, attack_chance=0.01, start_time=None):
     """
-    Generates a list of synthetic security events.
+    Generates a list of synthetic security events with a realistic normal-to-attack ratio.
 
     Parameters:
-      count (int): Total number of events to generate.
+      count (int): Total number of events to generate (default: 1000).
       attack_chance (float): Probability (0.0 to 1.0) of starting an attack sequence.
+                             Defaults to 0.01 (1%), providing realistic, low-frequency attack bursts.
       start_time (datetime, optional): Starting timestamp for the simulation.
 
     Returns:
@@ -189,15 +190,15 @@ def generate_events(count=20, attack_chance=0.2, start_time=None):
     while len(events) < count:
         remaining = count - len(events)
 
-        # Trigger a suspicious sequence if probability matches and there is room
-        if remaining >= 4 and random.random() < attack_chance:
+        # Trigger a suspicious sequence if probability matches and there is room for full sequence (up to 8 events)
+        if remaining >= 8 and random.random() < attack_chance:
             attack_events, current_time = generate_suspicious_sequence(current_time)
             events.extend(attack_events)
         else:
             normal_event, current_time = generate_normal_event(current_time)
             events.append(normal_event)
 
-    # Trim to exact requested count if sequence added slightly more
+    # Trim to exact requested count if needed
     return events[:count]
 
 
