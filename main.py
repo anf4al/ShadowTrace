@@ -106,7 +106,7 @@ print(f"1. Feature Columns Passed to Model ({len(FEATURE_COLUMNS)} numerical fea
 for i, col in enumerate(FEATURE_COLUMNS, 1):
     print(f"   {i:02d}. {col}")
 
-print("\n2. Numerical Feature Matrix X (Rows represent IPs, but source_ip string is excluded):")
+print("\n2. Numerical Feature Matrix X (Rows represent IPs, but source_ip and ground_truth are excluded):")
 # Create matrix X explicitly
 X = features_df[FEATURE_COLUMNS]
 print(X.to_string())
@@ -163,3 +163,67 @@ if not anomalies.empty:
             print("    - No specific threshold violations matched.")
 else:
     print("No anomalous IPs found to investigate.")
+
+# ============================================================
+# ML Model Evaluation (Ground Truth vs. Isolation Forest Predictions)
+# ============================================================
+print("\n" + "=" * 60)
+print("--- ML MODEL EVALUATION ---")
+
+# Step 3: Explicitly convert ML predictions into binary evaluation labels
+# Isolation Forest output: 1 = normal, -1 = anomaly
+# Evaluation label: 1 = predicted attacker, 0 = predicted normal
+ml_results_df["predicted_attacker"] = (ml_results_df["ml_prediction"] == -1).astype(int)
+
+# Identify ground truth pools present in this run
+known_attackers = ml_results_df[ml_results_df["ground_truth"] == 1]["source_ip"].tolist()
+known_normals = ml_results_df[ml_results_df["ground_truth"] == 0]["source_ip"].tolist()
+
+print("\nGround Truth:")
+print(f"  Total Unique IPs : {len(ml_results_df)}")
+print(f"  Known Attackers  : {len(known_attackers)} {known_attackers}")
+print(f"  Known Normal IPs : {len(known_normals)} {known_normals}")
+
+# Step 4: Calculate Confusion Matrix values (TP, FP, TN, FN)
+# True Positive (TP): Known attacker (ground_truth == 1) AND Model flagged as anomaly (predicted_attacker == 1)
+tp_mask = (ml_results_df["ground_truth"] == 1) & (ml_results_df["predicted_attacker"] == 1)
+tp_ips = ml_results_df.loc[tp_mask, "source_ip"].tolist()
+tp = len(tp_ips)
+
+# False Positive (FP): Known normal IP (ground_truth == 0) BUT Model flagged as anomaly (predicted_attacker == 1)
+fp_mask = (ml_results_df["ground_truth"] == 0) & (ml_results_df["predicted_attacker"] == 1)
+fp_ips = ml_results_df.loc[fp_mask, "source_ip"].tolist()
+fp = len(fp_ips)
+
+# True Negative (TN): Known normal IP (ground_truth == 0) AND Model correctly predicted normal (predicted_attacker == 0)
+tn_mask = (ml_results_df["ground_truth"] == 0) & (ml_results_df["predicted_attacker"] == 0)
+tn_ips = ml_results_df.loc[tn_mask, "source_ip"].tolist()
+tn = len(tn_ips)
+
+# False Negative (FN): Known attacker (ground_truth == 1) BUT Model missed it as normal (predicted_attacker == 0)
+fn_mask = (ml_results_df["ground_truth"] == 1) & (ml_results_df["predicted_attacker"] == 0)
+fn_ips = ml_results_df.loc[fn_mask, "source_ip"].tolist()
+fn = len(fn_ips)
+
+print("\nConfusion Matrix:")
+print(f"  True Positives  (TP) : {tp}  (Known attacker correctly flagged)")
+print(f"  False Positives (FP) : {fp}  (Normal IP falsely flagged as attacker)")
+print(f"  True Negatives  (TN) : {tn}  (Normal IP correctly identified as normal)")
+print(f"  False Negatives (FN) : {fn}  (Known attacker missed by the model)")
+
+# Step 5: Calculate Precision, Recall, and F1 Score with safe zero-division handling
+precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+
+print("\nPerformance:")
+print(f"  Precision : {precision:.4f} ({precision * 100:.1f}%)")
+print(f"  Recall    : {recall:.4f} ({recall * 100:.1f}%)")
+print(f"  F1 Score  : {f1_score:.4f}")
+
+# Categorized IP breakdown
+print("\nDetailed IP Categorization:")
+print(f"  Detected Attackers (TP) : {tp_ips if tp_ips else 'None'}")
+print(f"  Missed Attackers   (FN) : {fn_ips if fn_ips else 'None'}")
+print(f"  False Alarms       (FP) : {fp_ips if fp_ips else 'None'}")
+print(f"  Normal Traffic     (TN) : {tn_ips if tn_ips else 'None'}")

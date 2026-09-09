@@ -8,6 +8,7 @@ for future machine-learning anomaly detection models.
 
 from datetime import datetime
 import pandas as pd
+from event_generator import ATTACKER_IPS
 
 
 def extract_features(events):
@@ -117,6 +118,8 @@ def extract_features(events):
         failed_login_ratio = round(failed_login_count / total_logins, 4) if total_logins > 0 else 0.0
 
         # Step 6: Assemble the feature row dictionary for this IP
+        # Note: 'ground_truth' indicates known attacker status (1 = attacker, 0 = normal).
+        # It is strictly an evaluation label and MUST NEVER be used as an input feature for ML.
         feature_rows.append({
             "source_ip": ip,
             "failed_login_count": failed_login_count,
@@ -129,10 +132,11 @@ def extract_features(events):
             "failed_login_rate": failed_login_rate,
             "event_rate": event_rate,
             "failed_login_ratio": failed_login_ratio,
+            "ground_truth": 1 if ip in ATTACKER_IPS else 0,
         })
 
-    # Step 5: Convert the list of dictionaries into a pandas DataFrame
-    # source_ip remains a normal column (the default integer index is used)
+    # Step 7: Convert the list of dictionaries into a pandas DataFrame
+    # source_ip and ground_truth remain metadata/evaluation columns (default integer index)
     features_df = pd.DataFrame(feature_rows)
 
     return features_df

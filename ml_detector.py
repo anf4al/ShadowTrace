@@ -8,7 +8,9 @@ relying on hardcoded threshold rules.
 
 from sklearn.ensemble import IsolationForest
 
-# Explicit list of numerical feature columns used as model input
+# Explicit list of numerical feature columns used as model input.
+# NOTE: 'source_ip' (string identifier) and 'ground_truth' (evaluation label)
+# are deliberately EXCLUDED to prevent data leakage and keep detection unsupervised.
 FEATURE_COLUMNS = [
     "failed_login_count",
     "successful_login_count",
