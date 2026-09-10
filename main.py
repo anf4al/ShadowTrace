@@ -4,6 +4,7 @@ from detector import detect_failed_logins, detect_attack_sequences
 from features import extract_features
 from ml_detector import detect_anomalies, FEATURE_COLUMNS
 from investigator import investigate_anomaly, generate_reasons
+from risk_scorer import calculate_risk_scores
 
 # Configuration for generating synthetic cybersecurity events
 TOTAL_EVENTS = 1000
@@ -163,6 +164,24 @@ if not anomalies.empty:
             print("    - No specific threshold violations matched.")
 else:
     print("No anomalous IPs found to investigate.")
+
+# ============================================================
+# Hybrid Risk-Scoring Layer
+# ============================================================
+print("\n" + "=" * 60)
+print("--- Hybrid Risk Scoring ---")
+risk_assessments = calculate_risk_scores(ml_results_df)
+
+for assessment in risk_assessments:
+    print(f"\nIP: {assessment['source_ip']}")
+    print(f"Risk Score: {assessment['risk_score']}/100")
+    print(f"Risk Level: {assessment['risk_level']}")
+    print("Reasons:")
+    if assessment["reasons"]:
+        for reason in assessment["reasons"]:
+            print(f"  * {reason}")
+    else:
+        print("  * No suspicious factors identified")
 
 # ============================================================
 # ML Model Evaluation (Ground Truth vs. Isolation Forest Predictions)
