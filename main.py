@@ -166,11 +166,11 @@ else:
     print("No anomalous IPs found to investigate.")
 
 # ============================================================
-# Hybrid Risk-Scoring Layer
+# Hybrid Risk-Scoring Layer (Correlation-Aware)
 # ============================================================
 print("\n" + "=" * 60)
-print("--- Hybrid Risk Scoring ---")
-risk_assessments = calculate_risk_scores(ml_results_df)
+print("--- Hybrid Risk Scoring (Correlation-Aware) ---")
+risk_assessments = calculate_risk_scores(ml_results_df, attack_sequences=attack_sequences)
 
 for assessment in risk_assessments:
     print(f"\nIP: {assessment['source_ip']}")
